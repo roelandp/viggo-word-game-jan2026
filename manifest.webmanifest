@@ -1,0 +1,23 @@
+{
+  "name": "Grillworstje 3D - Woordenschat Oefenen",
+  "short_name": "Grillworstje 3D",
+  "description": "Een educatief 3D woordspel voor kinderen om Nederlandse en Engelse woorden te oefenen met Grillworstje boven de lava.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#ff6b35",
+  "background_color": "#87ceeb",
+  "categories": ["education", "games"],
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

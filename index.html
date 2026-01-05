@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Grillworstje 3D - Woordenschat Oefenen</title>
+    <meta name="description" content="Een educatief 3D woordspel voor kinderen om Nederlandse en Engelse woorden te oefenen met Grillworstje boven de lava.">
+    <meta name="theme-color" content="#ff6b35">
+    <!-- iOS PWA meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Grillworstje 3D">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    <!-- PWA manifest -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen">
+        <h1>🔥 Grillworstje boven de Lava 🔥</h1>
+        <p>Kies een toets om te oefenen:</p>
+        <div id="test-buttons">
+            <button id="nl-btn" class="test-btn">📚 Toets 8 jan (Nederlands)</button>
+            <button id="en-btn" class="test-btn">📖 Toets 9 jan (Engels)</button>
+        </div>
+        <div id="mode-selection" class="hidden">
+            <p id="selected-list-name"></p>
+            <p>Kies de spelmodus:</p>
+            <button id="mode-word-btn" class="mode-btn">Woord → Betekenis</button>
+            <button id="mode-meaning-btn" class="mode-btn">Betekenis → Woord</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+        <!-- Header met vraag en score -->
+        <div id="header">
+            <div id="word-display">Laad...</div>
+            <div id="mode-indicator">Kies de juiste betekenis:</div>
+            <div id="score">Score: 0</div>
+            <div id="lives">Levens: ❤️❤️❤️</div>
+        </div>
+        
+        <!-- Three.js Container - 3D game area -->
+        <div id="three-container"></div>
+        
+        <!-- HTML Antwoord kaarten (onder het canvas) -->
+        <div id="answer-cards">
+            <div class="answer-card" data-index="0">
+                <span class="card-label">A</span>
+                <span class="card-text">Antwoord A</span>
+            </div>
+            <div class="answer-card" data-index="1">
+                <span class="card-label">B</span>
+                <span class="card-text">Antwoord B</span>
+            </div>
+            <div class="answer-card" data-index="2">
+                <span class="card-label">C</span>
+                <span class="card-text">Antwoord C</span>
+            </div>
+            <div class="answer-card" data-index="3">
+                <span class="card-label">D</span>
+                <span class="card-text">Antwoord D</span>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div id="footer">
+            <button id="reset-btn">Terug naar Start</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen hidden">
+        <h2>Game Over!</h2>
+        <p id="final-stats"></p>
+        <button id="play-again-btn">Opnieuw Spelen</button>
+    </div>
+
+    <!-- Feedback Overlay -->
+    <div id="feedback" class="hidden"></div>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
