@@ -22,6 +22,9 @@ class ThreeScene {
         this.grillworst = null;
         this.platformLabels = [];
 
+        // In de constructor
+        this.bubbles = [];
+
         // Animation management
         this.animations = [];
         this.clock = new THREE.Clock();
@@ -88,38 +91,58 @@ class ThreeScene {
     }
 
     createGround() {
-        const geometry = new THREE.PlaneGeometry(20, 20);
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                time: { value: 0 },
-                color1: { value: new THREE.Color(0xff4500) }, // Orange red
-                color2: { value: new THREE.Color(0xffa500) }  // Orange
-            },
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform float time;
-                uniform vec3 color1;
-                uniform vec3 color2;
-                varying vec2 vUv;
-                void main() {
-                    float pulse = sin(time * 2.0) * 0.1 + 0.9;
-                    vec3 color = mix(color1, color2, vUv.y * pulse);
-                    gl_FragColor = vec4(color, 1.0);
-                }
-            `
-        });
-        this.ground = new THREE.Mesh(geometry, material);
-        this.ground.rotation.x = -Math.PI / 2;
-        this.ground.position.y = -0.5;
-        this.ground.receiveShadow = true;
-        this.scene.add(this.ground);
-    }
+            // Gebruik meer segmenten (32, 32) zodat we eventueel golven kunnen toevoegen
+            const geometry = new THREE.PlaneGeometry(30, 30, 32, 32);
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    color1: { value: new THREE.Color(0xff2200) }, // Diep rood/oranje
+                    color2: { value: new THREE.Color(0xffaa00) }  // Helder geel/oranje
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    uniform float time;
+                    void main() {
+                        vUv = uv;
+                        // Voeg een subtiele golvende beweging toe aan de vertexen
+                        vec3 pos = position;
+                        pos.z += sin(pos.x * 0.5 + time) * 0.1;
+                        pos.z += cos(pos.y * 0.5 + time) * 0.1;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform vec3 color1;
+                    uniform vec3 color2;
+                    varying vec2 vUv;
+
+                    // Simpele noise functie voor bubbel-vlekken
+                    float noise(vec2 p) {
+                        return sin(p.x * 10.0 + time) * sin(p.y * 10.0 + time * 0.5);
+                    }
+
+                    void main() {
+                        float n = noise(vUv);
+                        // Mix kleuren op basis van tijd en positie
+                        float pattern = sin(vUv.x * 5.0 + time * 0.5) * cos(vUv.y * 5.0 - time * 0.2);
+                        vec3 color = mix(color1, color2, pattern * 0.5 + 0.5);
+                        
+                        // Voeg "hot spots" toe
+                        if(n > 0.95) color += 0.2;
+                        
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `
+            });
+            this.ground = new THREE.Mesh(geometry, material);
+            this.ground.rotation.x = -Math.PI / 2;
+            this.ground.position.y = -0.55; // Iets lager om z-fighting te voorkomen
+            this.scene.add(this.ground);
+            
+            // Start het bubbel systeem
+            this.initBubbles();
+        }
 
     createPlatforms() {
         const positions = [
@@ -172,30 +195,72 @@ class ThreeScene {
     }
 
     createGrillworst() {
-        // Body - Capsule
-        const bodyGeometry = new THREE.CapsuleGeometry(0.3, 0.8, 4, 8);
-        const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0xd2691e }); // Saddle brown
-        this.grillworst = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        this.grillworst = new THREE.Group();
         this.grillworst.position.copy(this.grillworstPosition);
-        this.grillworst.castShadow = true;
         this.scene.add(this.grillworst);
 
-        // Eyes - Two small spheres
-        const eyeGeometry = new THREE.SphereGeometry(0.08, 8, 8);
-        const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
-        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-        leftEye.position.set(-0.15, 0.6, 0.25);
-        this.grillworst.add(leftEye);
+        // 1. Body - Capsule met de nieuwe kleur: #ca531d
+        const bodyGeometry = new THREE.CapsuleGeometry(0.35, 0.7, 12, 24);
+        const bodyMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xca531d, 
+            roughness: 0.5 
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.castShadow = true;
+        this.grillworst.add(body);
 
-        const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-        rightEye.position.set(0.15, 0.6, 0.25);
-        this.grillworst.add(rightEye);
+        // 2. Grillstrepen (Haren) - Kleur: #aa3b0d
+        // De hoogte is verlaagd (Y van 0.65 naar 0.55) en de y-offset berekening is gecorrigeerd
+        const stripeGeometry = new THREE.BoxGeometry(0.04, 0.04, 0.25); 
+        const stripeMaterial = new THREE.MeshStandardMaterial({ color: 0xaa3b0d });
+        
+        for (let i = 0; i < 5; i++) {
+            const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+            // Verdeel over de breedte
+            const xOffset = -0.15 + (i * 0.075);
+            
+            // De basis Y is nu 0.35 (het begin van de bovenste halve bol van de capsule)
+            // De wortel-berekening zorgt dat ze de bolling van de bovenkant volgen
+            const yBase = 0.35;
+            const sphereRadius = 0.35;
+            const yOffset = Math.sqrt(Math.max(0, Math.pow(sphereRadius, 2) - Math.pow(xOffset, 2)));
+            
+            // We trekken er een heel klein beetje vanaf (0.02) zodat ze minder "zweven"
+            stripe.position.set(xOffset, yBase + yOffset - 0.02, 0); 
+            
+            // Laat de strepen meekantelen met de ronding van het hoofd
+            stripe.rotation.z = -xOffset * 2; 
+            
+            body.add(stripe);
+        }
 
-        // Mouth - Small plane
-        const mouthGeometry = new THREE.PlaneGeometry(0.2, 0.1);
-        const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
-        mouth.position.set(0, 0.4, 0.3);
+        // 3. Ogen
+        const createEye = (xPos) => {
+            const eyeGroup = new THREE.Group();
+            const white = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            const pupil = new THREE.Mesh(
+                new THREE.SphereGeometry(0.04, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0x000000 })
+            );
+            pupil.position.z = 0.08;
+            eyeGroup.add(white, pupil);
+            eyeGroup.position.set(xPos, 0.25, 0.32);
+            return eyeGroup;
+        };
+
+        this.grillworst.add(createEye(-0.15));
+        this.grillworst.add(createEye(0.15));
+
+        // 4. De Mond - Nu ook in de kleur van de grillstrepen voor eenheid
+        const mouthGeo = new THREE.TorusGeometry(0.1, 0.025, 8, 16, Math.PI);
+        const mouthMat = new THREE.MeshBasicMaterial({ color: 0xaa3b0d });
+        const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+        
+        mouth.position.set(0, 0.05, 0.35); 
+        mouth.rotation.set(0, 0, Math.PI); 
         this.grillworst.add(mouth);
     }
 
@@ -416,6 +481,79 @@ class ThreeScene {
         });
     }
 
+    // VOEG DIT HIER TOE:
+    smoothLookAt(object, targetPosition, duration = 0.8) {
+        const startQuaternion = object.quaternion.clone();
+
+        // Gebruik een Object3D in plaats van .clone() voor betere performance
+        const dummy = new THREE.Object3D();
+        dummy.position.copy(object.position);
+        
+        const flatTarget = targetPosition.clone();
+        flatTarget.y = object.position.y;
+        dummy.lookAt(flatTarget);
+        const targetQuaternion = dummy.quaternion.clone();
+
+        this.animations.push({
+            type: 'rotate',
+            object: object,
+            startQuaternion: startQuaternion,
+            targetQuaternion: targetQuaternion,
+            elapsed: 0,
+            duration: duration
+        });
+    }
+
+    initBubbles() {
+        const bubbleCount = 15;
+        const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+        const material = new THREE.MeshLambertMaterial({ 
+            color: 0xff4500,
+            emissive: 0xff2200,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        for (let i = 0; i < bubbleCount; i++) {
+            const bubble = new THREE.Mesh(geometry, material.clone());
+            this.resetBubble(bubble);
+            // Verspreid starttijden
+            bubble.userData.offset = Math.random() * 10;
+            this.scene.add(bubble);
+            this.bubbles.push(bubble);
+        }
+    }
+
+    resetBubble(bubble) {
+        bubble.position.set(
+            (Math.random() - 0.5) * 20,
+            -0.6, // Start onder het oppervlak
+            (Math.random() - 0.5) * 20
+        );
+        bubble.scale.setScalar(Math.random() * 0.5 + 0.2);
+        bubble.userData.speed = Math.random() * 0.02 + 0.01;
+        bubble.userData.life = 0;
+    }
+
+    updateBubbles(delta) {
+        this.bubbles.forEach(bubble => {
+            bubble.userData.life += delta;
+            
+            // Laat bubbel langzaam stijgen
+            bubble.position.y += bubble.userData.speed;
+            
+            // Schaal-effect: "opzwelgen" en dan knappen
+            const s = Math.sin(bubble.userData.life * 2);
+            bubble.scale.setScalar(bubble.scale.x + s * 0.001);
+
+            // Als de bubbel te hoog komt of te oud is, reset
+            if (bubble.position.y > 0 || bubble.userData.life > 4) {
+                // "Splash" effect bij knappen (optioneel: je zou hier een kleinschalige explosie kunnen doen)
+                this.resetBubble(bubble);
+            }
+        });
+    }
+
     easeOutQuad(t) {
         return t * (2 - t);
     }
@@ -500,6 +638,11 @@ class ThreeScene {
                 // Smooth look at interpolation
                 const currentLookAt = new THREE.Vector3().lerpVectors(anim.startLookAt, anim.targetLookAt, easedT);
                 this.camera.lookAt(currentLookAt);
+            } 
+            else if (anim.type === 'rotate') {
+                const easedT = this.easeOutQuad(t);
+                // Vloeiende interpolatie tussen de start- en doelrotatie (Quaternion)
+                anim.object.quaternion.slerpQuaternions(anim.startQuaternion, anim.targetQuaternion, easedT);
             }
 
             // Remove completed animations and call callbacks
@@ -539,7 +682,14 @@ class ThreeScene {
     // Update camera position with smooth panning
     updateCameraPosition(index) {
         const targetPosition = this.getCameraPositionForIndex(index);
-        this.panCameraToPosition(targetPosition);
+        
+        // Start de camera pan
+        this.panCameraToPosition(targetPosition, 1.5);
+        
+        // Start direct de vloeiende draai van de worst naar de NIEUWE camerapositie
+        if (this.grillworst) {
+            this.smoothLookAt(this.grillworst, targetPosition, 1.2);
+        }
     }
 
     // Camera panning animation
@@ -579,6 +729,9 @@ class ThreeScene {
         if (this.ground && this.ground.material && this.ground.material.uniforms) {
             this.ground.material.uniforms.time.value += delta;
         }
+        
+        // knal bubbles in de lava!
+        this.updateBubbles(delta);
 
         // Update animaties
         this.updateActiveAnimations(delta);
