@@ -1,13 +1,14 @@
 // app.js
 // Hoofdlogica voor het Grillworstje 3D spel.
-// Ondersteunt twee woordenlijsten (NL en EN) en twee spelmodi.
 
 import { wordList } from './words.js';
 import { englishWordList } from './words_en.js';
 import { 
   initThreeScene, 
   disposeThreeScene,
-  updateCamera,
+  updateCameraPosition,
+  startVictoryAnimation,
+  stopVictoryAnimation,
   highlightPlatform,
   spawnConfetti,
   animateJump,
@@ -17,9 +18,6 @@ import {
   resetPlatforms
 } from './threeScene.js';
 
-// ============================================================================
-// GAME STATE
-// ============================================================================
 let gameState = {
   currentIndex: 0,
   score: 0,
@@ -31,10 +29,10 @@ let gameState = {
   listName: '',
   gameMode: 'word',
   isAnimating: false,
-  isWrongAnswerShown: false
+  isWrongAnswerShown: false,
+  totalQuestions: 15
 };
 
-// DOM elements
 const startScreen = document.getElementById('start-screen');
 const testButtons = document.getElementById('test-buttons');
 const modeSelection = document.getElementById('mode-selection');
@@ -48,6 +46,9 @@ const livesDisplay = document.getElementById('lives');
 const modeIndicator = document.getElementById('mode-indicator');
 const threeContainer = document.getElementById('three-container');
 const answerCards = document.querySelectorAll('.answer-card');
+const victoryOverlay = document.getElementById('victory-overlay');
+const victoryStats = document.getElementById('victory-stats');
+const endTitle = document.getElementById('end-title');
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -82,6 +83,31 @@ function updateAnswerCards(options) {
   });
 }
 
+function updatePlatformLabels() {
+  const labels = ['A', 'B', 'C', 'D'];
+  if (globalThis.threeSceneInstance) {
+    // Update platform labels with A/B/C/D
+    globalThis.threeSceneInstance.platformLabels.forEach((labelSprite, index) => {
+      if (labelSprite && globalThis.threeSceneInstance.updateTextSprite) {
+        globalThis.threeSceneInstance.updateTextSprite(labelSprite, labels[index]);
+      }
+    });
+    
+    // Also update platform labels with answer options
+    if (gameState.currentOptions && gameState.currentOptions.length > 0) {
+      gameState.currentOptions.forEach((option, index) => {
+        if (index < globalThis.threeSceneInstance.platformLabels.length) {
+          // For now, just show A/B/C/D, but we could show short versions of answers
+          // globalThis.threeSceneInstance.updateTextSprite(
+          //   globalThis.threeSceneInstance.platformLabels[index],
+          //   labels[index] + ': ' + (option.substring(0, 10) + '...')
+          // );
+        }
+      });
+    }
+  }
+}
+
 function highlightCard(index, type) {
   answerCards.forEach((card, i) => {
     card.classList.remove('selected', 'correct', 'wrong');
@@ -101,55 +127,50 @@ function resetAnswerCards() {
 // GAME INITIALISATIE
 // ============================================================================
 
-/**
- * Reset spel state en start nieuw spel.
- */
 function initGame() {
-  // Reset speelstate (behoud woordenlijst)
   gameState.currentIndex = 0;
   gameState.score = 0;
   gameState.lives = 3;
   gameState.isAnimating = false;
   gameState.isWrongAnswerShown = false;
   
-  // Controleer of er een woordenlijst is
   if (!gameState.currentList || gameState.currentList.length === 0) {
     console.error('Geen woordenlijst beschikbaar!');
     return;
   }
   
-  // Shuffle de woordenlijst
-  gameState.shuffledWords = shuffleArray([...gameState.currentList]);
+  const availableWords = shuffleArray([...gameState.currentList]);
+  gameState.shuffledWords = availableWords.slice(0, gameState.totalQuestions);
   
-  // Reset Three.js scene en UI
   resetPlatforms();
   resetGrillworstje();
   resetAnswerCards();
   
-  // Laad eerste vraag
   loadNextQuestion();
   updateUI();
+  
+  // Play intro sound
+  AudioManager.playIntro();
 }
 
-/**
- * Laad de volgende vraag.
- */
 function loadNextQuestion() {
-  // Controleer of er een lijst is
   if (!gameState.currentList || gameState.currentList.length === 0) {
-    console.error('currentList is leeg!');
     return;
   }
   
-  // Check of alle woorden beantwoord zijn
+  // Check victory condition after each question
+  if (checkVictoryCondition()) {
+    levelComplete();
+    return;
+  }
+  
   if (gameState.currentIndex >= gameState.shuffledWords.length) {
-    gameState.shuffledWords = shuffleArray([...gameState.currentList]);
-    gameState.currentIndex = 0;
+    levelComplete();
+    return;
   }
   
   const currentWord = gameState.shuffledWords[gameState.currentIndex];
   
-  // Genereer opties
   let options = [];
   let correctAnswer = '';
   
@@ -178,6 +199,9 @@ function loadNextQuestion() {
 }
 
 function renderQuestion(currentWord) {
+  // Random camera hoek per vraag
+  updateCameraPosition(gameState.currentIndex);
+  
   if (gameState.gameMode === 'word') {
     wordDisplay.textContent = currentWord.word;
     if (modeIndicator) modeIndicator.textContent = 'Kies de juiste betekenis:';
@@ -187,6 +211,7 @@ function renderQuestion(currentWord) {
   }
   
   updateAnswerCards(gameState.currentOptions);
+  updatePlatformLabels();
   resetPlatforms();
   resetGrillworstje();
   gameState.isAnimating = false;
@@ -203,6 +228,302 @@ function updateUI() {
 }
 
 // ============================================================================
+// AUDIO MANAGER - Simpele Web Audio API voor sound effects
+// ============================================================================
+
+// AudioContext resume handler - defined separately so it can be removed
+const resumeAudioHandler = (event) => {
+  event.preventDefault(); // Prevent default behavior
+  
+  if (AudioManager.ctx && AudioManager.ctx.state === 'suspended') {
+    AudioManager.ctx.resume().then(() => {
+      console.log('AudioContext resumed on user interaction');
+    }).catch(err => {
+      console.error('Failed to resume AudioContext:', err);
+    });
+  }
+  
+  // Remove listeners after first interaction to prevent multiple calls
+  document.removeEventListener('touchstart', resumeAudioHandler);
+  document.removeEventListener('mousedown', resumeAudioHandler);
+  document.removeEventListener('keydown', resumeAudioHandler);
+};
+
+// Audio Manager for MP3 sound effects
+const AudioManager = {
+  ctx: null,
+  initialized: false,
+  audioCache: {},
+
+  init() {
+    if (this.initialized) return;
+    
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+      
+      // iOS Safari requires explicit resume after user interaction
+      // Add one-time listener to resume on first interaction
+      document.addEventListener('touchstart', resumeAudioHandler, { passive: true });
+      document.addEventListener('mousedown', resumeAudioHandler, { passive: true });
+      document.addEventListener('keydown', resumeAudioHandler, { passive: true });
+      
+    } catch (e) {
+      console.error('Web Audio API not supported:', e);
+    }
+  },
+  
+  ensureContext() {
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  },
+  
+  // Load and cache audio files
+  loadAudioFile(name, url) {
+    return new Promise((resolve, reject) => {
+      if (this.audioCache[name]) {
+        resolve(this.audioCache[name]);
+        return;
+      }
+      
+      // Ensure audio context is initialized
+      this.init();
+      
+      if (!this.ctx) {
+        console.error('AudioContext not available');
+        reject(new Error('AudioContext not available'));
+        return;
+      }
+      
+      const request = new XMLHttpRequest();
+      request.open('GET', url, true);
+      request.responseType = 'arraybuffer';
+      
+      request.onload = () => {
+        if (request.status !== 200) {
+          console.error('Failed to load audio file, status:', request.status);
+          reject(new Error('Failed to load audio file'));
+          return;
+        }
+        
+        this.ctx.decodeAudioData(request.response, (buffer) => {
+          this.audioCache[name] = buffer;
+          resolve(buffer);
+        }, (error) => {
+          console.error('Error decoding audio data:', error);
+          reject(error);
+        });
+      };
+      
+      request.onerror = () => {
+        console.error('Error loading audio file:', url);
+        reject(new Error('Failed to load audio file'));
+      };
+      
+      request.send();
+    });
+  },
+  
+  // Play cached audio buffer
+  playAudio(name) {
+    this.ensureContext();
+    if (!this.ctx || !this.audioCache[name]) return;
+    
+    try {
+      const source = this.ctx.createBufferSource();
+      source.buffer = this.audioCache[name];
+      
+      const gainNode = this.ctx.createGain();
+      gainNode.gain.value = 0.5; // Volume control
+      
+      source.connect(gainNode);
+      gainNode.connect(this.ctx.destination);
+      
+      source.start(0);
+    } catch (e) {
+      console.error('Error playing audio:', e);
+    }
+  },
+  
+  // Preload all audio files
+  preloadAudioFiles() {
+    const audioFiles = [
+      { name: 'fx_good', url: 'assets/fx_good.mp3' },
+      { name: 'fx_intro', url: 'assets/fx_intro.mp3' },
+      { name: 'fx_oof', url: 'assets/fx_oof.mp3' },
+      { name: 'fx_lose', url: 'assets/fx_lose.mp3' },
+      { name: 'fx_win', url: 'assets/fx_win.mp3' }
+    ];
+    
+    return Promise.all(audioFiles.map(file => this.loadAudioFile(file.name, file.url)));
+  },
+  
+  // Play sound effects
+  playGood() {
+    this.playAudio('fx_good');
+  },
+  
+  playWrong() {
+    this.playAudio('fx_oof');
+  },
+  
+  playLose() {
+    this.playAudio('fx_lose');
+  },
+  
+  playWin() {
+    this.playAudio('fx_win');
+  },
+  
+  playIntro() {
+    this.playAudio('fx_intro');
+  },
+  
+  playSelect() {
+    this.ensureContext();
+    this.playTone(440, 0.1, 'sine', 0.2);
+  },
+  
+  // Fallback tone generation (kept for compatibility)
+  playTone(frequency, duration, type = 'sine', volume = 0.3) {
+    this.ensureContext();
+    if (!this.ctx) return;
+    
+    try {
+      const oscillator = this.ctx.createOscillator();
+      const gainNode = this.ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(this.ctx.destination);
+      
+      oscillator.frequency.value = frequency;
+      oscillator.type = type;
+      gainNode.gain.setValueAtTime(volume, this.ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+      
+      oscillator.start(this.ctx.currentTime);
+      oscillator.stop(this.ctx.currentTime + duration);
+    } catch (e) {
+      console.error('Error playing tone:', e);
+    }
+  }
+};
+
+// ============================================================================
+// VICTORY DETECTION
+// ============================================================================
+
+function checkVictoryCondition() {
+  const score = gameState.score;
+  const lives = gameState.lives;
+
+  // Gewonnen als: ALLE vragen goed beantwoord EN nog levens over
+  const hasEnoughCorrect = score >= gameState.totalQuestions;
+  const hasLives = lives > 0;
+
+  return hasEnoughCorrect && hasLives;
+}
+
+// Victory flow: first party, then blur overlay, then game-over screen
+function levelComplete() {
+  const isVictory = checkVictoryCondition();
+  const percentage = Math.round((gameState.score / gameState.totalQuestions) * 100);
+
+  if (isVictory) {
+    // Victory mode
+    AudioManager.playWin();
+
+    // Set stats for later display
+    victoryStats.innerHTML = `
+      <p style="font-size: 1.5rem; color: #4caf50;">🎉 GEWONNEN! 🎉</p>
+      <p>Lijst: ${gameState.listName}</p>
+      <p>Modus: ${gameState.gameMode === 'word' ? 'Woord → Betekenis' : 'Betekenis → Woord'}</p>
+      <p>Score: ${gameState.score}/${gameState.totalQuestions} (${percentage}%)</p>
+      <p>${gameState.lives} levens over!</p>
+    `;
+
+    // Stage 1: Start victory party immediately (camera orbit, grillworst spinning, confetti)
+    startVictoryAnimation();
+
+    // Stage 2: After 2500ms, show blur overlay with stats
+    setTimeout(() => {
+      victoryOverlay.classList.remove('hidden');
+      victoryOverlay.classList.add('win-state');
+    }, 2500);
+
+    // Stage 3: After 5500ms total, hide everything and show game-over screen
+    setTimeout(() => {
+      // Stop victory party
+      stopVictoryAnimation();
+
+      // Hide victory overlay
+      victoryOverlay.classList.add('hidden');
+      victoryOverlay.classList.remove('win-state');
+
+      // Hide game screen, show game-over screen
+      gameScreen.classList.add('hidden');
+      gameOverScreen.classList.remove('hidden');
+
+      // Set game-over content
+      endTitle.textContent = 'Gewonnen! 🎊';
+      document.getElementById('final-stats').innerHTML = `
+        <p style="font-size: 1.5rem; color: #4caf50;">🎉 GEWONNEN! 🎉</p>
+        <p>Lijst: ${gameState.listName}</p>
+        <p>Modus: ${gameState.gameMode === 'word' ? 'Woord → Betekenis' : 'Betekenis → Woord'}</p>
+        <p>Score: ${gameState.score}/${gameState.totalQuestions} (${percentage}%)</p>
+        <p>${gameState.lives} levens over!</p>
+      `;
+    }, 5500);
+
+  } else {
+    // Game over - niet genoeg vragen goed
+    AudioManager.playLose();
+
+    endTitle.textContent = 'Nog even oefenen! 📚';
+    document.getElementById('final-stats').innerHTML = `
+      <p>Lijst: ${gameState.listName}</p>
+      <p>Modus: ${gameState.gameMode === 'word' ? 'Woord → Betekenis' : 'Betekenis → Woord'}</p>
+      <p>Score: ${gameState.score}/${gameState.totalQuestions} (${percentage}%)</p>
+      <p>Je hebt ${gameState.totalQuestions - gameState.score} vragen fout beantwoord.</p>
+      <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+        Je moet ${gameState.totalQuestions} vragen goed beantwoorden om te winnen!
+      </p>
+    `;
+
+    // Ensure victory overlay is hidden
+    victoryOverlay.classList.add('hidden');
+    victoryOverlay.classList.remove('win-state');
+
+    gameScreen.classList.add('hidden');
+    gameOverScreen.classList.remove('hidden');
+  }
+}
+
+function gameOver() {
+  const percentage = Math.round((gameState.score / gameState.totalQuestions) * 100);
+  
+  // Play lose sound when player runs out of lives
+  AudioManager.playLose();
+  
+  endTitle.textContent = 'Game Over!';
+  document.getElementById('final-stats').innerHTML = `
+    <p>Lijst: ${gameState.listName}</p>
+    <p>Modus: ${gameState.gameMode === 'word' ? 'Woord → Betekenis' : 'Betekenis → Woord'}</p>
+    <p>Score: ${gameState.score}/${gameState.totalQuestions} (${percentage}%)</p>
+    <p>Je levens zijn op! 💔</p>
+  `;
+
+  // Ensure victory overlay is hidden
+  victoryOverlay.classList.add('hidden');
+  victoryOverlay.classList.remove('win-state');
+  
+  gameScreen.classList.add('hidden');
+  gameOverScreen.classList.remove('hidden');
+}
+
+// ============================================================================
 // ANTWOORD VERWERKING
 // ============================================================================
 
@@ -215,13 +536,19 @@ function handleOptionSelected(selectedIndex) {
   
   const isCorrect = selectedIndex === gameState.correctIndex;
   
-  animateJump(selectedIndex, () => {
-    if (isCorrect) {
-      handleCorrect(selectedIndex);
-    } else {
-      handleWrong(selectedIndex);
-    }
-  });
+  // Make sure the ThreeScene instance is available
+  if (globalThis.threeSceneInstance) {
+    animateJump(selectedIndex, () => {
+      if (isCorrect) {
+        handleCorrect(selectedIndex);
+      } else {
+        handleWrong(selectedIndex);
+      }
+    });
+  } else {
+    console.error('ThreeScene instance not available');
+    gameState.isAnimating = false;
+  }
 }
 
 function handleCorrect(platformIndex) {
@@ -229,15 +556,25 @@ function handleCorrect(platformIndex) {
   updateUI();
   highlightPlatform(platformIndex);
   highlightCard(platformIndex, 'correct');
-  spawnConfetti();
   showFeedback('Goed gedaan! 🎉');
   
-  animateCorrect(platformIndex, () => {
+  // Play good sound effect
+  AudioManager.playGood();
+  
+  // Use the ThreeScene instance directly for animations
+  if (globalThis.threeSceneInstance) {
+    globalThis.threeSceneInstance.animateCorrectChoice(platformIndex);
     setTimeout(() => {
       gameState.currentIndex++;
       loadNextQuestion();
-    }, 1200);
-  });
+    }, 2000);
+  } else {
+    console.error('ThreeScene instance not available for correct animation');
+    setTimeout(() => {
+      gameState.currentIndex++;
+      loadNextQuestion();
+    }, 800);
+  }
 }
 
 function handleWrong(platformIndex) {
@@ -248,7 +585,29 @@ function handleWrong(platformIndex) {
   showFeedback('Oef! ❌');
   gameState.isWrongAnswerShown = true;
   
-  animateWrong(platformIndex, () => {
+  // Play wrong sound effect
+  AudioManager.playWrong();
+  
+  // Use the ThreeScene instance directly for animations
+  if (globalThis.threeSceneInstance) {
+    globalThis.threeSceneInstance.animateWrongChoice(platformIndex);
+    
+    const currentWord = gameState.shuffledWords[gameState.currentIndex];
+    const correctAnswer = gameState.gameMode === 'word' ? currentWord.correct : currentWord.word;
+    
+    setTimeout(() => {
+      highlightPlatform(gameState.correctIndex);
+      highlightCard(gameState.correctIndex, 'correct');
+      showFeedback(`Juist: ${correctAnswer}`, 3000);
+    }, 2000);
+    
+    setTimeout(() => {
+      gameState.currentIndex++;
+      loadNextQuestion();
+    }, 4000);
+  } else {
+    console.error('ThreeScene instance not available for wrong animation');
+    
     const currentWord = gameState.shuffledWords[gameState.currentIndex];
     const correctAnswer = gameState.gameMode === 'word' ? currentWord.correct : currentWord.word;
     
@@ -262,21 +621,7 @@ function handleWrong(platformIndex) {
       gameState.currentIndex++;
       loadNextQuestion();
     }, 4000);
-  });
-}
-
-function gameOver() {
-  const totalQuestions = gameState.currentList.length;
-  const percentage = Math.round((gameState.score / totalQuestions) * 100);
-  
-  document.getElementById('final-stats').innerHTML = `
-    <p>Lijst: ${gameState.listName}</p>
-    <p>Modus: ${gameState.gameMode === 'word' ? 'Woord → Betekenis' : 'Betekenis → Woord'}</p>
-    <p>Score: ${gameState.score}/${totalQuestions} (${percentage}%)</p>
-  `;
-  
-  gameScreen.classList.add('hidden');
-  gameOverScreen.classList.remove('hidden');
+  }
 }
 
 // ============================================================================
@@ -300,21 +645,26 @@ function startGame(mode) {
     onOptionSelected: handleOptionSelected
   });
   
-  setTimeout(() => updateCamera(), 100);
+  setTimeout(() => {
+    updateCameraPosition(0);
+  }, 100);
+  
   initGame();
+  // Play intro sound when starting a new game
+  AudioManager.playIntro();
 }
 
-/**
- * Ga terug naar startscherm (volledige reset inclusief woordenlijst).
- */
 function stopGame() {
+  stopVictoryAnimation();
   disposeThreeScene();
   gameScreen.classList.add('hidden');
+  gameOverScreen.classList.add('hidden');
+  victoryOverlay.classList.add('hidden');
+  victoryOverlay.classList.remove('win-state');
   startScreen.classList.remove('hidden');
   testButtons.classList.remove('hidden');
   modeSelection.classList.add('hidden');
   
-  // Reset alles inclusief woordenlijst
   gameState.currentList = [];
   gameState.listName = '';
   gameState.currentIndex = 0;
@@ -325,26 +675,39 @@ function stopGame() {
   gameState.correctIndex = -1;
 }
 
-/**
- * Speel opnieuw (behoud woordenlijst, herstart spel).
- */
 function playAgain() {
+  stopVictoryAnimation();
   gameOverScreen.classList.add('hidden');
+  victoryOverlay.classList.add('hidden');
+  victoryOverlay.classList.remove('win-state');
   gameScreen.classList.remove('hidden');
   
-  // Reset Three.js
   disposeThreeScene();
   initThreeScene(threeContainer, {
     onOptionSelected: handleOptionSelected
   });
   
-  setTimeout(() => updateCamera(), 100);
+  setTimeout(() => {
+    updateCameraPosition(0);
+  }, 100);
+  
   initGame();
+  // Play intro sound again when replaying
+  AudioManager.playIntro();
 }
 
 // ============================================================================
 // EVENT LISTENERS
 // ============================================================================
+
+// Preload audio files when the page loads
+window.addEventListener('load', () => {
+  AudioManager.preloadAudioFiles().then(() => {
+    console.log('Audio files preloaded successfully');
+  }).catch(error => {
+    console.error('Error preloading audio files:', error);
+  });
+});
 
 document.getElementById('nl-btn').addEventListener('click', () => {
   selectList(wordList, 'Toets 8 jan (Nederlands)');
@@ -370,7 +733,10 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
   playAgain();
 });
 
-// Antwoord kaarten
+document.getElementById('home-btn').addEventListener('click', () => {
+  stopGame();
+});
+
 answerCards.forEach((card, index) => {
   card.addEventListener('click', () => {
     if (!gameState.isAnimating && !gameState.isWrongAnswerShown) {
@@ -383,10 +749,9 @@ answerCards.forEach((card, index) => {
     if (!gameState.isAnimating && !gameState.isWrongAnswerShown) {
       handleOptionSelected(index);
     }
-  }, { passive: false });
+  }, { passive: true });
 });
 
-// Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
@@ -403,4 +768,4 @@ document.addEventListener('touchmove', (e) => {
   if (e.target.closest('#three-container')) {
     e.preventDefault();
   }
-}, { passive: false });
+}, { passive: true });

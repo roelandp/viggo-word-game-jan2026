@@ -6,14 +6,12 @@
     <title>Grillworstje 3D - Woordenschat Oefenen</title>
     <meta name="description" content="Een educatief 3D woordspel voor kinderen om Nederlandse en Engelse woorden te oefenen met Grillworstje boven de lava.">
     <meta name="theme-color" content="#ff6b35">
-    <!-- iOS PWA meta tags -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Grillworstje 3D">
     <link rel="apple-touch-icon" href="assets/icon-192.png">
-    <!-- PWA manifest -->
     <link rel="manifest" href="manifest.webmanifest">
-    <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -35,54 +33,57 @@
 
     <!-- Game Screen -->
     <div id="game-screen" class="screen hidden">
-        <!-- Header met vraag en score -->
         <div id="header">
             <div id="word-display">Laad...</div>
             <div id="mode-indicator">Kies de juiste betekenis:</div>
             <div id="score">Score: 0</div>
             <div id="lives">Levens: ❤️❤️❤️</div>
         </div>
-        
-        <!-- Three.js Container - 3D game area -->
         <div id="three-container"></div>
-        
-        <!-- HTML Antwoord kaarten (onder het canvas) -->
-        <div id="answer-cards">
+        <div id="answer-cards-container">
             <div class="answer-card" data-index="0">
-                <span class="card-label">A</span>
-                <span class="card-text">Antwoord A</span>
+                <div class="card-label">A</div>
+                <div class="card-text"></div>
             </div>
             <div class="answer-card" data-index="1">
-                <span class="card-label">B</span>
-                <span class="card-text">Antwoord B</span>
+                <div class="card-label">B</div>
+                <div class="card-text"></div>
             </div>
             <div class="answer-card" data-index="2">
-                <span class="card-label">C</span>
-                <span class="card-text">Antwoord C</span>
+                <div class="card-label">C</div>
+                <div class="card-text"></div>
             </div>
             <div class="answer-card" data-index="3">
-                <span class="card-label">D</span>
-                <span class="card-text">Antwoord D</span>
+                <div class="card-label">D</div>
+                <div class="card-text"></div>
             </div>
         </div>
-        
-        <!-- Footer -->
         <div id="footer">
             <button id="reset-btn">Terug naar Start</button>
         </div>
     </div>
 
-    <!-- Game Over Screen -->
+    <!-- Level Complete / Game Over Screen -->
     <div id="game-over-screen" class="screen hidden">
-        <h2>Game Over!</h2>
+        <h2 id="end-title">Game Over!</h2>
         <p id="final-stats"></p>
-        <button id="play-again-btn">Opnieuw Spelen</button>
+        <div id="end-buttons">
+            <button id="play-again-btn">Opnieuw Spelen</button>
+            <button id="home-btn">Naar Start</button>
+        </div>
+    </div>
+
+    <!-- Victory Overlay (transparent met blur) -->
+    <div id="victory-overlay" class="hidden">
+        <div class="victory-content">
+            <h1>🎉 Level Voltooid! 🎉</h1>
+            <p id="victory-stats"></p>
+        </div>
     </div>
 
     <!-- Feedback Overlay -->
     <div id="feedback" class="hidden"></div>
 
-    <!-- Scripts -->
     <script type="module" src="app.js"></script>
 </body>
 </html>

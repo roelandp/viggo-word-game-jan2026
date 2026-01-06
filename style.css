@@ -129,14 +129,22 @@ body {
     transform: translateY(-2px);
 }
 
+.mode-btn.selected {
+    background-color: #66bb6a;
+    transform: scale(1.05);
+}
+
 /* ============================================================================
    GAME SCHERM
    ============================================================================ */
 #game-screen {
     background: linear-gradient(to bottom, #87ceeb 0%, #ff8c00 60%, #ff4500 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
 }
 
-/* Header bar */
 #header {
     display: flex;
     justify-content: space-between;
@@ -173,97 +181,93 @@ body {
 
 /* Three.js Container */
 #three-container {
-    flex: 1;
-    width: 100%;
-    min-height: 280px;
     position: relative;
+    width: 100%;
+    flex: 0 0 55vh;
+    max-height: 55vh;
+    min-height: 260px;
     touch-action: none;
+    overflow: hidden;
 }
 
-/* ============================================================================
-   ANTWOORD KAARTEN - VERBETERDE LAYOUT
-   ============================================================================ */
-#answer-cards {
+/* Container rondom de vier antwoordkaarten */
+#answer-cards-container {
     display: flex;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: stretch;
-    gap: 10px;
-    padding: 15px 10px;
-    background-color: rgba(255, 255, 255, 0.95);
-    border-top: 3px solid #333;
-    width: 100%;
-    flex-wrap: wrap;
-    min-height: 120px;
+    gap: 16px;
+    padding: 12px 24px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
+/* Individuele kaarten */
 .answer-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
-    color: white;
-    padding: 14px 16px;
+    flex: 1 1 0;
+    min-width: 0;              /* nodig voor text-wrap i.c.m. flex */
+    background: #ffffff;
     border-radius: 12px;
+    border: 2px solid #e0e0ff;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    padding: 12px 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    flex: 1;
-    min-width: 140px;
-    max-width: none;
-    height: auto;
-    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
 }
 
-.answer-card:hover,
-.answer-card:active {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+.answer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.16);
 }
 
-.answer-card.selected {
-    background: linear-gradient(135deg, #ffeb3b 0%, #fdd835 100%);
+.answer-card .card-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: #4a90e2;
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 10px;
+}
+
+.answer-card .card-text {
+    font-size: 0.95rem;
+    line-height: 1.4;
     color: #333;
-    transform: scale(1.05);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* States */
+.answer-card.selected {
+    border-color: #ffb300;
 }
 
 .answer-card.correct {
-    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-    transform: scale(1.05);
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.25);
 }
 
 .answer-card.wrong {
-    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-    opacity: 0.85;
+    border-color: #c62828;
+    box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.2);
 }
 
-.card-label {
-    font-size: clamp(1.3rem, 3.5vw, 1.6rem);
-    font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.25);
-    color: inherit;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
+/* Responsief – op kleine schermen kaarten onder elkaar */
+@media (max-width: 768px) {
+    #answer-cards-container {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 8px 12px 16px;
+    }
 
-.answer-card.selected .card-label {
-    background-color: rgba(0, 0, 0, 0.15);
-}
-
-.card-text {
-    font-size: clamp(0.95rem, 2.8vw, 1.1rem);
-    text-align: left;
-    line-height: 1.4;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
-    flex: 1;
-    min-width: 0;
+    .answer-card {
+        flex: 1 1 100%;
+    }
 }
 
 /* Footer */
@@ -360,62 +364,25 @@ body {
 }
 
 /* ============================================================================
-   RESPONSIVE STIJLEN
-   ============================================================================ */
+     RESPONSIVE STIJLEN
+     ============================================================================ */
 @media (min-width: 768px) {
     #mode-indicator {
         display: block;
     }
-    
+
     #test-buttons {
         flex-direction: row;
     }
-    
+
     .test-btn {
         min-width: 250px;
-    }
-    
-    #answer-cards {
-        gap: 15px;
-        padding: 20px 15px;
-    }
-    
-    /* Desktop: 2 kaarten per rij voor betere leesbaarheid */
-    .answer-card {
-        max-width: 50%;
-        min-width: 280px;
     }
 }
 
 @media (max-width: 600px) {
     #header {
         padding: 10px 12px;
-    }
-    
-    #answer-cards {
-        padding: 12px 8px;
-        gap: 8px;
-    }
-    
-    /* Mobile: 2 kaarten per rij */
-    .answer-card {
-        min-width: calc(50% - 8px);
-        flex: none;
-        width: calc(50% - 8px);
-        flex-direction: column;
-        text-align: center;
-        gap: 8px;
-        padding: 12px 10px;
-    }
-    
-    .card-text {
-        text-align: center;
-    }
-    
-    .card-label {
-        width: 38px;
-        height: 38px;
-        font-size: 1.2rem;
     }
 }
 
@@ -425,65 +392,38 @@ body {
         font-size: 1.5rem;
         margin-bottom: 10px;
     }
-    
+
     #start-screen p {
         margin-bottom: 15px;
         font-size: 0.9rem;
     }
-    
+
     .test-btn {
         padding: 12px 20px;
         font-size: 0.9rem;
         min-width: auto;
     }
-    
+
     #header {
         padding: 6px 10px;
     }
-    
+
     #word-display {
         font-size: 1.1rem;
     }
-    
+
     #three-container {
         min-height: 200px;
-        flex: 1;
-    }
-    
-    #answer-cards {
-        padding: 8px 10px;
-        gap: 10px;
-        min-height: auto;
-    }
-    
-    .answer-card {
-        min-width: auto;
-        padding: 8px 12px;
-        flex-direction: row;
-        height: auto;
-    }
-    
-    .card-text {
-        font-size: 0.85rem;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
+        flex: 0 0 50vh;
     }
 }
 
 /* ============================================================================
-   IPAD SPECIFIEKE STIJLEN
-   ============================================================================ */
+     IPAD SPECIFIEKE STIJLEN
+     ============================================================================ */
 @media (min-width: 768px) and (max-width: 1024px) {
     #three-container {
-        min-height: 350px;
-    }
-    
-    #answer-cards {
-        padding: 15px 15px;
-    }
-    
-    .answer-card {
-        min-width: 200px;
+        min-height: 300px;
     }
 }
 
@@ -498,4 +438,74 @@ body {
         height: 100vh;
         height: -webkit-fill-available;
     }
+}
+
+/* ============================================================================
+    VICTORY OVERLAY
+    ============================================================================ */
+#victory-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    animation: fadeIn 0.5s ease-out;
+    pointer-events: none;
+}
+
+/* Victory overlay stays visible when player wins */
+#victory-overlay.win-state {
+    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+#victory-overlay h2 {
+    font-size: clamp(2rem, 8vw, 4rem);
+    color: #4caf50;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+    animation: bounce 0.6s ease;
+}
+
+#victory-overlay .stats {
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+#victory-overlay button {
+    font-size: clamp(1rem, 3vw, 1.3rem);
+    padding: 15px 30px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+#victory-overlay button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
