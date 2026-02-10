@@ -710,11 +710,11 @@ window.addEventListener('load', () => {
 });
 
 document.getElementById('nl-btn').addEventListener('click', () => {
-  selectList(wordList, 'Toets 8 jan (Nederlands)');
+  selectList(wordList, 'Toets 12 feb (Nederlands)');
 });
 
 document.getElementById('en-btn').addEventListener('click', () => {
-  selectList(englishWordList, 'Toets 9 jan (Engels)');
+  selectList(englishWordList, 'Toets 17 feb (Engels)');
 });
 
 document.getElementById('mode-word-btn').addEventListener('click', () => {
