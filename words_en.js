@@ -1,135 +1,42 @@
 // words_en.js
 // Dit bestand bevat de Engelse woordenlijst voor het spel.
 // Elke entry heeft 'word' (het Engelse woord) en 'correct' (de Nederlandse betekenis).
-// Foute antwoorden kunnen net als bij de Nederlandse lijst uit andere 'correct'-waarden komen.
 
 export const englishWordList = [
-  // Unit 2 – lesson 1 – Shopping
-  {
-    word: "shopping list",
-    correct: "boodschappenlijst"
-  },
-  {
-    word: "supermarket",
-    correct: "supermarkt"
-  },
-  {
-    word: "delicious",
-    correct: "heerlijk, lekker"
-  },
-  {
-    word: "cheap",
-    correct: "goedkoop"
-  },
-  {
-    word: "sweets",
-    correct: "snoep"
-  },
-  {
-    word: "food",
-    correct: "voedsel, eten"
-  },
-  {
-    word: "drink",
-    correct: "drankje"
-  },
-  {
-    word: "fish",
-    correct: "vis"
-  },
-  {
-    word: "meat",
-    correct: "vlees"
-  },
-  {
-    word: "to be hungry",
-    correct: "honger hebben"
-  },
+  // Unit 3 – lesson 1 – Just in time
+  { word: "the time", correct: "de tijd" },
+  { word: "a day", correct: "een dag" },
+  { word: "a week", correct: "een week" },
+  { word: "Monday", correct: "maandag" },
+  { word: "Tuesday", correct: "dinsdag" },
+  { word: "Wednesday", correct: "woensdag" },
+  { word: "Thursday", correct: "donderdag" },
+  { word: "Friday", correct: "vrijdag" },
+  { word: "Saturday", correct: "zaterdag" },
+  { word: "Sunday", correct: "zondag" },
 
-  // Unit 2 – lesson 2 – Shopping
-  {
-    word: "pence",
-    correct: "pence (Engels geldstuk)"
-  },
-  {
-    word: "vegetables",
-    correct: "groenten"
-  },
-  {
-    word: "carrots",
-    correct: "wortelen"
-  },
-  {
-    word: "broccoli",
-    correct: "broccoli"
-  },
-  {
-    word: "peaches",
-    correct: "perziken"
-  },
-  {
-    word: "fruit",
-    correct: "fruit"
-  },
-  {
-    word: "to smell",
-    correct: "ruiken"
-  },
-  {
-    word: "strawberries",
-    correct: "aardbeien"
-  },
-  {
-    word: "price",
-    correct: "prijs"
-  },
-  {
-    word: "to pay",
-    correct: "betalen"
-  },
+  // Unit 3 – lesson 2 – Just in time
+  { word: "clock", correct: "klok" },
+  { word: "an hour", correct: "een uur" },
+  { word: "nine o'clock", correct: "negen uur" },
+  { word: "half past ten", correct: "half elf" },
+  { word: "at night", correct: "nacht" },
+  { word: "tomorrow", correct: "morgen" },
+  { word: "today", correct: "vandaag" },
+  { word: "to sleep", correct: "slapen" },
+  { word: "once a week", correct: "een keer per week" },
+  { word: "awake", correct: "wakker" },
 
-  // Unit 2 – lesson 3 – Shopping
-  {
-    word: "money",
-    correct: "geld"
-  },
-  {
-    word: "banknotes",
-    correct: "bankbiljetten"
-  },
-  {
-    word: "check out",
-    correct: "kassa"
-  },
-  {
-    word: "coins",
-    correct: "muntgeld"
-  },
-  {
-    word: "pound",
-    correct: "pond"
-  },
-  {
-    word: "greengrocer",
-    correct: "groenteboer"
-  },
-  {
-    word: "to buy",
-    correct: "kopen"
-  },
-  {
-    word: "fruit section",
-    correct: "fruitafdeling"
-  },
-  {
-    word: "change",
-    correct: "wisselgeld"
-  },
-  {
-    word: "shopping trolley",
-    correct: "winkelwagentje"
-  }
+  // Unit 3 – lesson 3 – Just in time
+  { word: "the watch", correct: "het horloge" },
+  { word: "last week", correct: "vorige week" },
+  { word: "morning", correct: "ochtend" },
+  { word: "afternoon", correct: "middag" },
+  { word: "evening", correct: "avond" },
+  { word: "calendar", correct: "kalender" },
+  { word: "to rush", correct: "haasten" },
+  { word: "to get up", correct: "opstaan" },
+  { word: "to wake up", correct: "wakker worden" },
+  { word: "lazy", correct: "lui" },
+  { word: "diary", correct: "agenda" }
 ];
-
-// Notitie: Je kunt dezelfde logica gebruiken als bij de Nederlandse lijst
-// om foute antwoorden te genereren uit de andere 'correct'-waarden.
