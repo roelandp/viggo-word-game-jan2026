@@ -2,7 +2,7 @@
 // Service Worker voor caching van de app-bestanden.
 // Zorgt ervoor dat de app offline speelbaar is zodra geladen.
 
-const CACHE_NAME = 'grillworstje-v1';
+const CACHE_NAME = 'grillworstje-v2';
 const urlsToCache = [
   './',
   './index.html',
