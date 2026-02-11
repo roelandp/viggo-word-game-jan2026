@@ -15,8 +15,9 @@ const urlsToCache = [
   // Voeg evt. grillworstje.png toe als je een afbeelding gebruikt
 ];
 
-// Install event: cache de bestanden
+// Install event: cache de bestanden en forceer directe activatie
 self.addEventListener('install', event => {
+  self.skipWaiting(); // Forceer directe activatie van wachtende updates
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -36,7 +37,7 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Activate event: clean up old caches
+// Activate event: clean up old caches en claim alle clients
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -47,6 +48,8 @@ self.addEventListener('activate', event => {
           }
         })
       );
+    }).then(() => {
+      return self.clients.claim(); // Neem controle over alle clients
     })
   );
 });

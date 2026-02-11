@@ -757,6 +757,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(registration => {
         console.log('SW registered: ', registration);
+        
+        // Luister naar updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Er is een update beschikbaar - toon melding
+              showFeedback('🔄 Nieuwe versie beschikbaar! Herlaad de pagina.', 5000);
+            }
+          });
+        });
       })
       .catch(registrationError => {
         console.log('SW registration failed: ', registrationError);
